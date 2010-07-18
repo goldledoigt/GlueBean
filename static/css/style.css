@@ -5,3 +5,88 @@
 .icon-edit {
     background-image:url("http://cdn.iconfinder.net/data/icons/momenticons-basic/16x16/edit.png") !important;
 }
+
+.icon-unlock {
+    background-image:url("http://cdn.iconfinder.net/data/icons/Siena/16/unlock.png") !important;
+}
+
+.icon-lock {
+    background-image:url("http://cdn.iconfinder.net/data/icons/Siena/16/lock%20blue.png") !important;
+}
+
+.icon-tick {
+    background-image:url("http://cdn.iconfinder.net/data/icons/ledicons/accept.png") !important;
+}
+
+.icon-help {
+    background-image:url("http://cdn.iconfinder.net/data/icons/gnomeicontheme/16x16/actions/help-faq.png") !important;
+}
+
+/**************************************/
+
+body {
+    padding:0;
+    margin:0;
+    font:12px helvetica,arial,freesans,clean,sans-serif;
+}
+
+a {
+    color:#666666;
+    text-decoration:none;
+}
+
+a:hover {
+    text-decoration:underline;
+}
+
+
+#header, #footer, #main {
+x    border:1px solid black;
+}
+
+#header, #footer {
+    height:40px;
+}
+
+#main, #header-wrap {
+    margin:0 auto;
+    width:800px;
+}
+
+#header-wrap {
+    margin:10px auto 0 auto;
+    width:800px;
+}
+
+#header-wrap #title {
+    font-size:34px;
+    padding-top:10px;
+}
+
+#main-wrap {
+    margin:5px;
+}
+
+#toolbar {
+    height:30px;
+}
+
+#editor-ctn {
+    margin-top:5px;
+    border:1px solid #99BBE8;
+}
+
+#editor {
+    height:300px;
+}
+
+#footer {
+    text-align:center;
+    padding-top:10px;
+    font-size:10px;
+}
+
+.x-resizable-handle-south {
+    xborder-top:1px solid #99BBE8;
+    background-position:center 11px !important;
+}

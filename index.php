@@ -18,7 +18,7 @@ class gluebean {
 				$this->page_get_blob();
 				break;
 			default:
-				$html = file_get_contents('static/html/index.html');
+				$html = file_get_contents('static/html/index2.html');
 				print $html;
 		}
 	}
