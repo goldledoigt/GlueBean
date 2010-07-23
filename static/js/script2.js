@@ -4,6 +4,18 @@ GlueBean = function() {
 
     var mask = false;
     
+    var historyPidTpl = new Ext.XTemplate(
+        '<div><a style="font-size:12px">{pid}</a></div>'
+        ,'<div style="font-size:10px">{blob}{[values.blob.length === 80 ? "..." : ""]}</div>'
+        ,{compiled:true}
+    );
+
+    var historyDetailsTpl = new Ext.Template(
+        '<div><a>{name}</a></div>'
+        ,'<div>{syntax} | <a class="date-init">{date_init}</a></div>'
+        ,{compiled:true}
+    );
+
     // TODO: rewrite this to catch PID in the url
     function getUrlPid() {
         var s = window.location.search;
@@ -56,12 +68,48 @@ GlueBean = function() {
         toolbar.pidField.setValue(PID);
         toolbar.pidField.focus();
     }
-    
-    function render() {
-        editor.render("editor");
-        toolbar.render("toolbar");
+
+    function toggleLock() {
+        if (toolbar.lockButton.iconCls === "icon-unlock") {
+            submit();
+        } else if (toolbar.lockButton.iconCls === "icon-lock") {
+            get();
+        }
     }
-    
+
+    function render() {
+        toolbar.render("toolbar");
+        details.render("details");
+        editor.render("editor");
+        history.render("history");
+    }
+
+    function historyPidRenderer(value, metaData, record) {
+        return historyPidTpl.apply(record.data);
+    }
+
+    function historyDetailsRenderer(value, metaData, record) {
+        return historyDetailsTpl.apply(record.data);
+    }
+
+    function toggleMode(mode) {
+        if (mode === "readonly") {
+            details.nameField.disable();
+            details.syntaxField.disable();
+            details.expireField.disable();
+            details.emailField.disable();
+        } else if (mode === "edit") {
+            details.nameField.enable();
+            details.syntaxField.enable();
+            details.expireField.enable();
+            details.emailField.enable();
+        }
+    }
+
+    /*********************************************************************************
+    ***** ONRENDER *******************************************************************
+    *********************************************************************************/
+
     function onRender() {
         var resizer = new Ext.Resizable("editor", {
             pinned:true
@@ -86,14 +134,20 @@ GlueBean = function() {
         });
 
         mask = new Ext.LoadMask(editor.body, {msg:"Please wait..."});
-    }
-
-    function toggleLock() {
-        if (toolbar.lockButton.iconCls === "icon-unlock") {
-            submit();
-        } else if (toolbar.lockButton.iconCls === "icon-lock") {
+        
+        var pid = getUrlPid();
+        if (pid) {
+            console.log("setPID", this, window);
+            setPID(pid);
             get();
+            toggleMode("readonly");
+        } else {
+            this.textarea.focus();
         }
+     
+        Ext.get('loading').remove();
+        Ext.get('loading-mask').fadeOut({remove:true});
+
     }
 
     /*********************************************************************************
@@ -128,6 +182,10 @@ GlueBean = function() {
         var password = toolbar.password.getValue();
         var salt = "SALT";
         var blob = Base64.encode(RC4Stream(salt + password, text));
+        var name = details.nameField.getValue();
+        var syntax = details.syntaxField.getValue();
+        var expire = details.expireField.getValue();
+        var email = details.emailField.getValue();
         editor.textarea.setValue(blob);
         editor.panel.update(blob);
 
@@ -139,6 +197,10 @@ GlueBean = function() {
 		        page:"save_blob"
 		        ,blob:blob
 		        ,salt:salt
+		        ,name:name
+		        ,syntax:syntax
+		        ,expire:expire
+		        ,email:email
 		    }
 		});        
     }
@@ -152,12 +214,16 @@ GlueBean = function() {
         var success = function(response, options) {
 	        var json = Ext.decode(response.responseText);
 	        if (json.success) {
+	            /*
 	            var password = "";
                 blob = RC4Stream(json.salt + password, Base64.decode(json.blob));
                 editor.textarea.setValue(blob);
                 editor.panel.update(blob);
                 editor.getLayout().setActiveItem(0);
                 toolbar.lockButton.setIconClass("icon-unlock");
+                */
+//                editor.textarea.setValue(json.blob);
+                editor.panel.update(json.blob);
 	        }
         };
         
@@ -277,7 +343,7 @@ GlueBean = function() {
             }]
         }]
     });
-    
+
     /*********************************************************************************
     ***** EDITOR *********************************************************************
     *********************************************************************************/
@@ -306,32 +372,131 @@ GlueBean = function() {
             afterrender:onRender
         }
     });
-    
+
+    /*********************************************************************************
+    ***** DETAILS ********************************************************************
+    *********************************************************************************/
+
+    var details = new Ext.form.FieldSet({
+        title:"Details"
+        ,autoHeight:true
+        ,collapsible:true
+        ,collapsed:false
+        ,bodyStyle:"padding:0 5px"
+        ,items:[{
+            layout:"column"
+            ,border:false
+            ,items:[{
+                columnWidth:.5
+                ,layout:"form"
+                ,autoHeight:true
+                ,border:false
+                ,labelWidth:90
+                ,items:[{
+                    xtype:"textfield"
+                    ,anchor:"-40"
+                    ,fieldLabel:"Name / Title"
+                    ,ref:"../../nameField"
+                }, {
+                    xtype:"combo"
+                    ,anchor:"-40"
+                    ,mode:"local"
+                    ,fieldLabel:"Post expiration"
+                    ,ref:"../../expireField"
+                    ,displayField:"expire"
+                    ,store:new Ext.data.ArrayStore({
+                        fields:["expire"]
+                        ,data:[["Never"], ["10 Minutes"], ["1 Hour"], ["1 Day"], ["1 Month"]]
+                    })
+                }]
+            }, {
+                columnWidth:.5
+                ,layout:"form"
+                ,border:false
+                ,labelWidth:60
+                ,items:[{
+                    xtype:"textfield"
+                    ,anchor:"-20"
+                    ,fieldLabel:"Email"
+                    ,ref:"../../emailField"
+                }, {
+                    xtype:"combo"
+                    ,anchor:"-20"
+                    ,mode:"local"
+                    ,fieldLabel:"Syntax"
+                    ,ref:"../../syntaxField"
+                    ,displayField:"syntax"
+                    ,store:new Ext.data.ArrayStore({
+                        fields:["syntax"]
+                        ,data:[["CSS"], ["HTML"], ["JavaScript"], ["PHP"], ["Python"]]
+                    })
+                }]
+            }]
+        }]
+    });
+
+    /*********************************************************************************
+    ***** HISTORY ********************************************************************
+    *********************************************************************************/
+
+    var historyStore = new Ext.data.JsonStore({
+        url:"index.php"
+        ,autoLoad:{params:{start:0, limit:20}}
+        ,root:"data"
+        ,totalProperty:"count"
+        ,fields:["pid", "blob", "date_init", "salt", "name", "syntax"]
+        ,baseParams:{page:"list_blob"}
+    });
+
+    var historyToolbar = new Ext.PagingToolbar({
+        pageSize:30
+        ,store:historyStore
+        ,displayInfo:true
+        ,plugins:new Ext.ux.ProgressBarPager()
+        ,items:["-", " ",
+            new Ext.ux.form.SearchField({
+                width:299
+                ,store:historyStore
+                ,emptyText:"search by user, syntax or pid"
+            }), " ", "-"
+        ]
+    });
+
+    var history = new Ext.form.FieldSet({
+        title:"History"
+        ,autoHeight:true
+        ,collapsible:true
+        ,collapsed:true
+        ,items:[{
+            xtype:"grid"
+            ,height:300
+            ,stripeRows:true
+            ,hideHeaders:true
+            ,trackMouseOver:false
+            ,store:historyStore
+            ,tbar:historyToolbar
+            ,viewConfig:{forceFit:true}
+            ,selModel:new Ext.grid.RowSelectionModel({singleSelect:true})
+            ,columns:[
+                {header:"Pid", dataIndex:"pid", renderer:historyPidRenderer}
+                ,{header:"Details", dataIndex:"name", width:150, fixed:true, renderer:historyDetailsRenderer}
+            ]
+            ,listeners:{
+                rowclick:function(grid, rowIndex) {
+                    var pid = grid.getStore().getAt(rowIndex).get("pid");
+                    console.log("PID", pid);
+                }
+            }
+        }]
+    });
+
     
     return Ext.apply(new Ext.util.Observable, {
 
         PID:false
 
-        /*********************************************************************************
-        ***** INIT ***********************************************************************
-        *********************************************************************************/
-
         ,init:function() {
             render();
-            
-        }
-
-        // scope is on editor
-        ,initx:function() {
-/*
-            var pid = getUrlPid();
-            if (pid) {
-                console.log("setPID", this, window);
-                setPID(pid);
-            } else {
-                this.textarea.focus();
-            }
-*/
         }
 
     });
